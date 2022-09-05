@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
@@ -77,51 +76,15 @@ func main() {
 	log.Println("Successfully started!")
 
 	database, err := initializeDB()
+	defer func() {
+		err := database.Close()
+		if err != nil {
+			log.Println("Database connection closing error: ", err)
+		}
+	}()
 
 	if err != nil {
 		log.Fatalf("Could not set up database %v", err)
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err = database.ExecContext(
-		ctx,
-		`CREATE TABLE IF NOT EXISTS test (id int primary key auto_increment, num int)`,
-	)
-
-	defer database.ExecContext(ctx, "DROP TABLE test;")
-
-	if err != nil {
-		log.Fatal("Create table err: ", err)
-	}
-
-	_, err = database.ExecContext(
-		ctx,
-		`INSERT INTO test(num) VALUES (?);`,
-		800,
-	)
-
-	if err != nil {
-		log.Fatal("Insert err: ", err)
-	}
-
-	data, err := database.QueryContext(
-		ctx,
-		`SELECT * FROM test;`,
-	)
-
-	if err != nil {
-		log.Fatal("Select err: ", err)
-	}
-
-	var id, num int
-
-	for data.Next() {
-		err = data.Scan(&id, &num)
-		fmt.Println(err, id, num)
-	}
-
-	log.Println(data.Close())
 
 }
